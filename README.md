@@ -2,14 +2,14 @@
 
 面向"知识原子"的本地优先知识管理与主动连接发现平台（后端）。
 
-> 当前进度：**V0.2 · 阶段 1（Epic 1 CRUD API）已交付** —— 工程化基线 + `/api/v1/atoms` 完整 CRUD（分页/搜索/软删除/乐观锁）、ContentType 枚举收口、领域事件、Flyway 迁移。规划详见 [`docs/improvement_plan_v0.2.md`](docs/improvement_plan_v0.2.md)。
+> 当前进度：**V0.2 · 阶段 2（Epic 2 主动连接发现）已交付** —— 知识原子 CRUD + 本地向量化异步"连接发现"流水线（可插拔 Embedding/VectorStore SPI）。规划详见 [`docs/improvement_plan_v0.2.md`](docs/improvement_plan_v0.2.md)。
 
 ## ✨ 功能路线（对齐需求蓝图）
 
 | Epic | 内容 | 状态 |
 | :--- | :--- | :--- |
 | 1 | 知识原子（KnowledgeAtom）CRUD：创建用 Builder、JPA 持久化、纯文本/Markdown | ✅ 已交付（`/api/v1/atoms`，含分页/关键词搜索/软删除/乐观锁） |
-| 2 | "主动式"连接发现：本地 BGE 向量化 + 向量库后台检索，发现原子间高相关连接 | 未开始 |
+| 2 | "主动式"连接发现：本地向量化 + 检索，自动发现原子间高相关连接 | ✅ 已交付（原子创建即异步发现，`/api/v1/connections` 可查；Embedding/向量库均可插拔切换） |
 | 3 | PC 端极简推送：AI 发现高相关连接后弹窗通知（Electron） | 未开始 |
 
 ## 🧰 技术栈
@@ -61,6 +61,15 @@ curl 'http://localhost:8080/api/v1/atoms?page=0&size=20&keyword=知识&contentTy
 curl http://localhost:8080/api/v1/atoms/1
 curl -X PATCH http://localhost:8080/api/v1/atoms/1 -H 'Content-Type: application/json' -d '{"contentText":"更新后的内容"}'
 curl -X DELETE http://localhost:8080/api/v1/atoms/1
+```
+
+知识连接发现（Epic 2，原子创建后自动异步执行）：
+
+```bash
+# 查看全部连接（可按 status=PENDING、minSimilarity=0.8 过滤）
+curl 'http://localhost:8080/api/v1/connections?status=PENDING'
+# 查看某个原子的连接
+curl 'http://localhost:8080/api/v1/atoms/1/connections'
 ```
 
 > 开发模式（自动写入一条演示数据、输出 SQL）：
