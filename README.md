@@ -2,7 +2,7 @@
 
 面向"知识原子"的本地优先知识管理与主动连接发现平台（后端）。
 
-> 当前进度：**V0.2 · 阶段 2（Epic 2 主动连接发现）已交付** —— 知识原子 CRUD + 本地向量化异步"连接发现"流水线（可插拔 Embedding/VectorStore SPI）。规划详见 [`docs/improvement_plan_v0.2.md`](docs/improvement_plan_v0.2.md)。
+> 当前进度：**V0.2 · 阶段 3（Epic 3 Web 界面）已交付** —— 知识原子 CRUD + 主动连接发现 + React 前端界面（原子管理 / 连接可视化）。规划详见 [`docs/improvement_plan_v0.2.md`](docs/improvement_plan_v0.2.md)。
 
 ## ✨ 功能路线（对齐需求蓝图）
 
@@ -10,7 +10,7 @@
 | :--- | :--- | :--- |
 | 1 | 知识原子（KnowledgeAtom）CRUD：创建用 Builder、JPA 持久化、纯文本/Markdown | ✅ 已交付（`/api/v1/atoms`，含分页/关键词搜索/软删除/乐观锁） |
 | 2 | "主动式"连接发现：本地向量化 + 检索，自动发现原子间高相关连接 | ✅ 已交付（原子创建即异步发现，`/api/v1/connections` 可查；Embedding/向量库均可插拔切换） |
-| 3 | PC 端极简推送：AI 发现高相关连接后弹窗通知（Electron） | 未开始 |
+| 3 | 极简推送/界面：高相关连接触达用户（PC 端） | ✅ Web 界面已交付（React：原子管理 + 连接发现可视化，对应"新笔记→旧笔记→相似度"展示）；桌面弹窗（Electron）可选后续 |
 
 ## 🧰 技术栈
 
