@@ -24,6 +24,7 @@ import com.aether.aether_backend.domain.ConnectionStatus;
 import com.aether.aether_backend.domain.ContentType;
 import com.aether.aether_backend.domain.KnowledgeAtom;
 import com.aether.aether_backend.domain.KnowledgeConnection;
+import com.aether.aether_backend.domain.event.AtomDeletedEvent;
 import com.aether.aether_backend.domain.event.ConnectionDiscoveredEvent;
 import com.aether.aether_backend.repository.KnowledgeAtomRepository;
 import com.aether.aether_backend.repository.KnowledgeConnectionRepository;
@@ -113,12 +114,35 @@ class ConnectionDiscoveryServiceTest {
         when(atomRepository.findById(2L)).thenReturn(Optional.of(atom));
         when(embeddingClient.embed("new note")).thenReturn(VECTOR);
         when(vectorStore.search(VECTOR, 5)).thenReturn(List.of(new ScoredAtom(1L, 0.9)));
+        when(atomRepository.findById(1L))
+                .thenReturn(Optional.of(new KnowledgeAtom.Builder("x", ContentType.TEXT).build()));
         when(connectionRepository.findBySourceAtomIdAndTargetAtomId(1L, 2L))
                 .thenReturn(Optional.of(new KnowledgeConnection(1L, 2L, 0.9, ConnectionStatus.PENDING, "r")));
 
         discoveryService.processAtom(2L);
 
         verify(connectionRepository, never()).save(any(KnowledgeConnection.class));
+    }
+
+    @Test
+    void processAtom_skipsDeletedHit() {
+        KnowledgeAtom atom = new KnowledgeAtom.Builder("new note", ContentType.TEXT).build();
+        atom.setId(1L);
+        when(atomRepository.findById(1L)).thenReturn(Optional.of(atom));
+        when(embeddingClient.embed("new note")).thenReturn(VECTOR);
+        when(vectorStore.search(VECTOR, 5)).thenReturn(List.of(new ScoredAtom(2L, 0.9)));
+        when(atomRepository.findById(2L)).thenReturn(Optional.empty()); // soft-deleted hit
+
+        discoveryService.processAtom(1L);
+
+        verify(connectionRepository, never()).save(any(KnowledgeConnection.class));
+    }
+
+    @Test
+    void onAtomDeleted_removesVectorFromStore() {
+        discoveryService.onAtomDeleted(new AtomDeletedEvent(5L));
+
+        verify(vectorStore).remove(5L);
     }
 
     @Test

@@ -38,4 +38,7 @@ jobs:
 
       - name: Install & build
         working-directory: frontend
+        # Skip downloading the Electron binary: `npm run build` only needs tsc + vite.
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
         run: npm ci && npm run build

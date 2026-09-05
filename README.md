@@ -164,6 +164,7 @@ npm run build      # 类型检查 + 生产构建 → dist/
 ## 🔐 配置与安全约定
 
 - **仓库中不存任何真实口令**：数据源凭据全部来自环境变量（`DB_URL` / `DB_USERNAME` / `DB_PASSWORD`），见 [`backend/.env.example`](backend/.env.example)。
+- **API 无鉴权（本地优先）**：REST 与 SSE 端点不带登录，面向本机 / 可信内网使用；如需暴露到公网，请在其前置反向代理鉴权或 API 网关。
 - 时间统一按 **UTC**（实体使用 `java.time.Instant`）。
 - 删除采用**逻辑删除**（`is_deleted`），查询自动过滤；实体带 `@Version` 乐观锁防并发覆盖。
 - API 统一返回 `Result{code, message, data, timestamp}`，错误码见 `ErrorCode`。

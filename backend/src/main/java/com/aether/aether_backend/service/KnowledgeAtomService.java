@@ -8,11 +8,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import com.aether.aether_backend.common.api.PageResult;
+import com.aether.aether_backend.common.api.PageUtil;
 import com.aether.aether_backend.common.exception.BusinessException;
 import com.aether.aether_backend.common.exception.ErrorCode;
 import com.aether.aether_backend.domain.ContentType;
 import com.aether.aether_backend.domain.KnowledgeAtom;
 import com.aether.aether_backend.domain.event.AtomCreatedEvent;
+import com.aether.aether_backend.domain.event.AtomDeletedEvent;
+import com.aether.aether_backend.domain.event.AtomUpdatedEvent;
 import com.aether.aether_backend.dto.AtomCreateRequest;
 import com.aether.aether_backend.dto.AtomResponse;
 import com.aether.aether_backend.dto.AtomUpdateRequest;
@@ -26,9 +29,6 @@ import com.aether.aether_backend.repository.KnowledgeAtomRepository;
  */
 @Service
 public class KnowledgeAtomService {
-
-    public static final int MAX_PAGE_SIZE = 100;
-    public static final int DEFAULT_PAGE_SIZE = 20;
 
     private final KnowledgeAtomRepository repository;
     private final ApplicationEventPublisher eventPublisher;
@@ -56,7 +56,7 @@ public class KnowledgeAtomService {
 
     @Transactional(readOnly = true)
     public PageResult<AtomResponse> list(int page, int size, ContentType contentType, String keyword) {
-        Pageable pageable = PageRequest.of(Math.max(page, 0), clampSize(size));
+        Pageable pageable = PageRequest.of(Math.max(page, 0), PageUtil.clampSize(size));
         String normalizedKeyword = StringUtils.hasText(keyword) ? keyword.trim() : null;
         return PageResult.from(
                 repository.search(contentType, normalizedKeyword, pageable), AtomResponse::from);
@@ -68,28 +68,28 @@ public class KnowledgeAtomService {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "更新请求不能同时为空");
         }
         KnowledgeAtom atom = getById(id);
+        boolean contentChanged = false;
         if (request.contentText() != null) {
             if (request.contentText().isBlank()) {
                 throw new BusinessException(ErrorCode.BAD_REQUEST, "contentText 不能为空白");
             }
             atom.setContentText(request.contentText());
+            contentChanged = true;
         }
         if (request.contentType() != null) {
             atom.setContentType(request.contentType());
         }
-        return repository.save(atom);
+        KnowledgeAtom saved = repository.save(atom);
+        if (contentChanged) {
+            eventPublisher.publishEvent(new AtomUpdatedEvent(saved.getId()));
+        }
+        return saved;
     }
 
     @Transactional
     public void delete(long id) {
         KnowledgeAtom atom = getById(id);
         repository.delete(atom); // logical delete via @SQLDelete
-    }
-
-    private int clampSize(int size) {
-        if (size <= 0) {
-            return DEFAULT_PAGE_SIZE;
-        }
-        return Math.min(size, MAX_PAGE_SIZE);
+        eventPublisher.publishEvent(new AtomDeletedEvent(id));
     }
 }

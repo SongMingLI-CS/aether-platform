@@ -15,6 +15,8 @@ import com.aether.aether_backend.domain.ConnectionStatus;
 import com.aether.aether_backend.domain.KnowledgeAtom;
 import com.aether.aether_backend.domain.KnowledgeConnection;
 import com.aether.aether_backend.domain.event.AtomCreatedEvent;
+import com.aether.aether_backend.domain.event.AtomDeletedEvent;
+import com.aether.aether_backend.domain.event.AtomUpdatedEvent;
 import com.aether.aether_backend.domain.event.ConnectionDiscoveredEvent;
 import com.aether.aether_backend.dto.ConnectionResponse;
 import com.aether.aether_backend.repository.KnowledgeAtomRepository;
@@ -68,6 +70,19 @@ public class ConnectionDiscoveryService {
         processAtom(event.atomId());
     }
 
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onAtomUpdated(AtomUpdatedEvent event) {
+        processAtom(event.atomId());
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onAtomDeleted(AtomDeletedEvent event) {
+        vectorStore.remove(event.atomId());
+        log.info(">>> Discovery: atom {} removed from vector store.", event.atomId());
+    }
+
     /**
      * Embeds + indexes the atom and searches for similar existing atoms.
      * Kept public (non-event path) so tests and batch jobs can run it directly.
@@ -89,29 +104,28 @@ public class ConnectionDiscoveryService {
             if (hit.atomId() == atomId || hit.score() < minSimilarity) {
                 continue;
             }
+            // Defensive: ignore hits whose atom no longer exists (e.g. soft-deleted).
+            KnowledgeAtom hitAtom = atomRepository.findById(hit.atomId()).orElse(null);
+            if (hitAtom == null) {
+                continue;
+            }
             long sourceId = Math.min(atomId, hit.atomId());
             long targetId = Math.max(atomId, hit.atomId());
             if (connectionRepository.findBySourceAtomIdAndTargetAtomId(sourceId, targetId).isPresent()) {
                 skipped++;
                 continue;
             }
-            String reason = buildReason(sourceId, targetId);
+            String sourceSnippet = snippet(sourceId == atomId ? atom.getContentText() : hitAtom.getContentText());
+            String targetSnippet = snippet(targetId == atomId ? atom.getContentText() : hitAtom.getContentText());
+            String reason = "「" + sourceSnippet + "」与「" + targetSnippet + "」内容语义相近，疑似相关";
             KnowledgeConnection saved = connectionRepository.save(new KnowledgeConnection(
                     sourceId, targetId, hit.score(), ConnectionStatus.PENDING, reason));
             eventPublisher.publishEvent(new ConnectionDiscoveredEvent(
-                    ConnectionResponse.from(saved, snippetOf(sourceId), snippetOf(targetId))));
+                    ConnectionResponse.from(saved, sourceSnippet, targetSnippet)));
             created++;
         }
         log.info(">>> Discovery: atom {} embedded+indexed; {} new connection(s), {} skipped/existing",
                 atomId, created, skipped);
-    }
-
-    private String buildReason(long sourceId, long targetId) {
-        return "「" + snippetOf(sourceId) + "」与「" + snippetOf(targetId) + "」内容语义相近，疑似相关";
-    }
-
-    private String snippetOf(long atomId) {
-        return snippet(atomRepository.findById(atomId).map(KnowledgeAtom::getContentText).orElse(""));
     }
 
     private String snippet(String text) {

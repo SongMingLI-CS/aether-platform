@@ -52,6 +52,20 @@ public class QdrantVectorStore implements VectorStore {
     }
 
     @Override
+    public void remove(long atomId) {
+        try {
+            restClient.post()
+                    .uri("/collections/{collection}/points/delete", collection)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("points", List.of(atomId)))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (Exception e) {
+            log.warn("Qdrant point delete failed for atom {}: {}", atomId, e.getMessage());
+        }
+    }
+
+    @Override
     public List<ScoredAtom> search(float[] queryVector, int topK) {
         if (ensuredDimensions == null || topK <= 0) {
             return List.of();
