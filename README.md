@@ -70,6 +70,16 @@ backend/src/main/java/com/aether/aether_backend
 ├── domain/        # 领域实体（Builder 创建、软删除、乐观锁、UTC 审计时间）
 └── repository/    # Spring Data JPA
 docs/              # 需求蓝图 / 数据库设计 / 完善方案（V0.2）
+frontend/          # Vite + React + TypeScript 前端
+```
+
+## 🖥 前端（Vite + React + TypeScript）
+
+```bash
+cd frontend
+npm install        # 安装依赖
+npm run dev        # 开发服务器 → http://localhost:5173（/api 自动代理到 8080 后端）
+npm run build      # 类型检查 + 生产构建 → dist/
 ```
 
 ## 🔐 配置与安全约定
