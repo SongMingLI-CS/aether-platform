@@ -1,6 +1,7 @@
 package com.aether.aether_backend.dto;
 
-import jakarta.validation.constraints.Pattern;
+import com.aether.aether_backend.domain.ContentType;
+
 import jakarta.validation.constraints.Size;
 
 /**
@@ -12,8 +13,7 @@ public record AtomUpdateRequest(
         @Size(max = 10000, message = "contentText 不能超过 10000 字符")
         String contentText,
 
-        @Pattern(regexp = "TEXT|MARKDOWN|IMAGE_URL", message = "contentType 仅支持 TEXT / MARKDOWN / IMAGE_URL")
-        String contentType) {
+        ContentType contentType) {
 
     public boolean isEmpty() {
         return contentText == null && contentType == null;

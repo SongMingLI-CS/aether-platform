@@ -11,9 +11,12 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.aether.aether_backend.common.api.Result;
+import com.aether.aether_backend.domain.ContentType;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 
 import jakarta.validation.ConstraintViolationException;
 
@@ -47,7 +50,19 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Result<Void>> handleUnreadable(HttpMessageNotReadableException ex) {
+        if (ex.getCause() instanceof InvalidFormatException invalid
+                && invalid.getTargetType() != null
+                && invalid.getTargetType().isEnum()
+                && invalid.getTargetType().equals(ContentType.class)) {
+            return respond(ErrorCode.BAD_REQUEST, "contentType 仅支持 TEXT / MARKDOWN / IMAGE_URL");
+        }
         return respond(ErrorCode.BAD_REQUEST, "请求体格式错误");
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Result<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String name = ex.getName() != null ? ex.getName() : "参数";
+        return respond(ErrorCode.BAD_REQUEST, name + " 取值非法");
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

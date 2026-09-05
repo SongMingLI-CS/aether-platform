@@ -1,14 +1,18 @@
 package com.aether.aether_backend.service;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import com.aether.aether_backend.common.api.PageResult;
 import com.aether.aether_backend.common.exception.BusinessException;
 import com.aether.aether_backend.common.exception.ErrorCode;
+import com.aether.aether_backend.domain.ContentType;
 import com.aether.aether_backend.domain.KnowledgeAtom;
+import com.aether.aether_backend.domain.event.AtomCreatedEvent;
 import com.aether.aether_backend.dto.AtomCreateRequest;
 import com.aether.aether_backend.dto.AtomResponse;
 import com.aether.aether_backend.dto.AtomUpdateRequest;
@@ -17,6 +21,8 @@ import com.aether.aether_backend.repository.KnowledgeAtomRepository;
 /**
  * Knowledge atom domain service. Creation is always done through the Builder
  * (CTO requirement); deletion is logical (see {@code @SQLDelete} on the entity).
+ * A newly created atom raises an {@link AtomCreatedEvent} that Epic 2's
+ * proactive connection discovery will consume.
  */
 @Service
 public class KnowledgeAtomService {
@@ -25,15 +31,20 @@ public class KnowledgeAtomService {
     public static final int DEFAULT_PAGE_SIZE = 20;
 
     private final KnowledgeAtomRepository repository;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public KnowledgeAtomService(KnowledgeAtomRepository repository) {
+    public KnowledgeAtomService(KnowledgeAtomRepository repository,
+                                ApplicationEventPublisher eventPublisher) {
         this.repository = repository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
     public KnowledgeAtom create(AtomCreateRequest request) {
         KnowledgeAtom atom = new KnowledgeAtom.Builder(request.contentText(), request.contentType()).build();
-        return repository.save(atom);
+        KnowledgeAtom saved = repository.save(atom);
+        eventPublisher.publishEvent(new AtomCreatedEvent(saved.getId()));
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -44,9 +55,11 @@ public class KnowledgeAtomService {
     }
 
     @Transactional(readOnly = true)
-    public PageResult<AtomResponse> list(int page, int size) {
+    public PageResult<AtomResponse> list(int page, int size, ContentType contentType, String keyword) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), clampSize(size));
-        return PageResult.from(repository.findAll(pageable), AtomResponse::from);
+        String normalizedKeyword = StringUtils.hasText(keyword) ? keyword.trim() : null;
+        return PageResult.from(
+                repository.search(contentType, normalizedKeyword, pageable), AtomResponse::from);
     }
 
     @Transactional

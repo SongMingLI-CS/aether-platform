@@ -2,13 +2,13 @@
 
 面向"知识原子"的本地优先知识管理与主动连接发现平台（后端）。
 
-> 当前进度：**V0.2 · 阶段 0（工程化基线）已落地** —— 分层架构 / 统一响应 / 全局异常 / 配置外置 / 软删除与乐观锁 / 集成测试。规划详见 [`docs/improvement_plan_v0.2.md`](docs/improvement_plan_v0.2.md)。
+> 当前进度：**V0.2 · 阶段 1（Epic 1 CRUD API）已交付** —— 工程化基线 + `/api/v1/atoms` 完整 CRUD（分页/搜索/软删除/乐观锁）、ContentType 枚举收口、领域事件、Flyway 迁移。规划详见 [`docs/improvement_plan_v0.2.md`](docs/improvement_plan_v0.2.md)。
 
 ## ✨ 功能路线（对齐需求蓝图）
 
 | Epic | 内容 | 状态 |
 | :--- | :--- | :--- |
-| 1 | 知识原子（KnowledgeAtom）CRUD：创建用 Builder、JPA 持久化、纯文本/Markdown | 阶段 1 待实施（Service/DTO/校验已就绪） |
+| 1 | 知识原子（KnowledgeAtom）CRUD：创建用 Builder、JPA 持久化、纯文本/Markdown | ✅ 已交付（`/api/v1/atoms`，含分页/关键词搜索/软删除/乐观锁） |
 | 2 | "主动式"连接发现：本地 BGE 向量化 + 向量库后台检索，发现原子间高相关连接 | 未开始 |
 | 3 | PC 端极简推送：AI 发现高相关连接后弹窗通知（Electron） | 未开始 |
 
@@ -47,6 +47,21 @@ curl http://localhost:8080/api/ping
 ```
 
 Swagger API 文档：http://localhost:8080/swagger-ui.html
+
+知识原子 CRUD 快速示例：
+
+```bash
+# 创建
+curl -X POST http://localhost:8080/api/v1/atoms \
+  -H 'Content-Type: application/json' \
+  -d '{"contentText":"我的第一条知识原子","contentType":"MARKDOWN"}'
+# 分页 + 关键词搜索（contentType 可选）
+curl 'http://localhost:8080/api/v1/atoms?page=0&size=20&keyword=知识&contentType=TEXT'
+# 详情 / 更新 / 删除（软删除）
+curl http://localhost:8080/api/v1/atoms/1
+curl -X PATCH http://localhost:8080/api/v1/atoms/1 -H 'Content-Type: application/json' -d '{"contentText":"更新后的内容"}'
+curl -X DELETE http://localhost:8080/api/v1/atoms/1
+```
 
 > 开发模式（自动写入一条演示数据、输出 SQL）：
 > `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`

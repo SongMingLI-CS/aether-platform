@@ -11,6 +11,7 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import com.aether.aether_backend.domain.ContentType;
 import com.aether.aether_backend.domain.KnowledgeAtom;
 import com.aether.aether_backend.dto.AtomCreateRequest;
 import com.aether.aether_backend.repository.KnowledgeAtomRepository;
@@ -49,7 +50,7 @@ class AetherBackendApplicationTests {
 
     @Test
     void create_persistsAtomWithAuditFields() {
-        KnowledgeAtom created = service.create(new AtomCreateRequest("spring data rocks", "TEXT"));
+        KnowledgeAtom created = service.create(new AtomCreateRequest("spring data rocks", ContentType.TEXT));
 
         assertThat(created.getId()).isNotNull();
         assertThat(created.getDeleted()).isFalse();
@@ -63,7 +64,7 @@ class AetherBackendApplicationTests {
 
     @Test
     void logicalDelete_hidesRowButKeepsPhysicalRecord() {
-        KnowledgeAtom atom = service.create(new AtomCreateRequest("to be deleted", "TEXT"));
+        KnowledgeAtom atom = service.create(new AtomCreateRequest("to be deleted", ContentType.TEXT));
 
         service.delete(atom.getId());
 

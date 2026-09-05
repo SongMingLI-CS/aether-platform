@@ -1,27 +1,29 @@
 package com.aether.aether_backend.repository;
 
-// 【导入 "弹药"】
-import com.aether.aether_backend.domain.KnowledgeAtom; // <-- 导入我们的"实体"
-import org.springframework.data.jpa.repository.JpaRepository; // <-- 导入"JPA神经索"核心
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.aether.aether_backend.domain.ContentType;
+import com.aether.aether_backend.domain.KnowledgeAtom;
 
 /**
- * "神经索" (DAO层 / Repository)
- *
- * CTO标准：我们"不"写实现。
- * 我们"命令" Spring Data JPA："请"自动"实现"一个"管理" KnowledgeAtom "实体"的"仓库"，
- * 这个"实体"的"主键(ID)"是 Long 类型。
- *
- * Spring Data JPA 会"自动"为我们提供：
- * - save() (增/改)
- * - findById() (查)
- * - findAll() (查所有)
- * - deleteById() (删)
- * - ...以及"更多"
+ * Spring Data JPA repository for KnowledgeAtom.
  */
 public interface KnowledgeAtomRepository extends JpaRepository<KnowledgeAtom, Long> {
 
-    // 我们"现在"什么都不用加。
-    // 未来(寒假)，当我们需要"定制"查询时 (比如 "按ContentType查找")，
-    // 我们才会在这里 "定义" "新" 的方法。
-
+    /**
+     * Paginated search with optional filters. Deleted rows are excluded by the
+     * entity-level @SQLRestriction.
+     */
+    @Query("""
+            select a from KnowledgeAtom a
+            where (:contentType is null or a.contentType = :contentType)
+              and (:keyword is null or lower(a.contentText) like lower(concat('%', :keyword, '%')))
+            """)
+    Page<KnowledgeAtom> search(@Param("contentType") ContentType contentType,
+                               @Param("keyword") String keyword,
+                               Pageable pageable);
 }

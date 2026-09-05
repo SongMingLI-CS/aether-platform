@@ -31,8 +31,9 @@ public class KnowledgeAtom {
     @Column(columnDefinition = "TEXT", nullable = false) // <-- 【注解5】: 对应"字段", TEXT类型, 不允许为空
     private String contentText;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private String contentType;
+    private ContentType contentType;
 
     // UTC instants: no ambiguity across timezones
     @Column(nullable = false)
@@ -94,11 +95,11 @@ public class KnowledgeAtom {
     public static class Builder {
         // "必填" 字段
         private final String contentText;
-        private final String contentType;
+        private final ContentType contentType;
 
         // "可选" 字段 (我们暂时没有，但Builder模式支持)
 
-        public Builder(String contentText, String contentType) {
+        public Builder(String contentText, ContentType contentType) {
             // 在Builder的"构造器"中"强制"所有"必填"参数
             if (contentText == null || contentType == null) {
                 throw new IllegalArgumentException("Content and Type must not be null");
@@ -133,11 +134,11 @@ public class KnowledgeAtom {
         this.contentText = contentText;
     }
 
-    public String getContentType() {
+    public ContentType getContentType() {
         return contentType;
     }
 
-    public void setContentType(String contentType) {
+    public void setContentType(ContentType contentType) {
         this.contentType = contentType;
     }
 

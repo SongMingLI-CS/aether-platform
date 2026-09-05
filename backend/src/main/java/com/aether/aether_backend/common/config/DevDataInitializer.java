@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
+import com.aether.aether_backend.domain.ContentType;
 import com.aether.aether_backend.domain.KnowledgeAtom;
 import com.aether.aether_backend.repository.KnowledgeAtomRepository;
 
@@ -29,7 +30,7 @@ public class DevDataInitializer {
                 return;
             }
             KnowledgeAtom demo = new KnowledgeAtom.Builder(
-                    "Aether Core-Zero - DB Connection Test - OK", "TEXT").build();
+                    "Aether Core-Zero - DB Connection Test - OK", ContentType.TEXT).build();
             KnowledgeAtom saved = repository.save(demo);
             log.info("Dev data initializer: seeded demo atom id={}", saved.getId());
         };
