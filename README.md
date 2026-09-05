@@ -1,8 +1,10 @@
 # Aether Platform
 
-面向"知识原子"的本地优先知识管理与主动连接发现平台（后端）。
+面向"知识原子"的本地优先知识管理与主动连接发现平台（后端 + React 前端）。
 
-> 当前进度：**V0.2 · 阶段 3（Epic 3 Web 界面）已交付** —— 知识原子 CRUD + 主动连接发现 + React 前端界面（原子管理 / 连接可视化）。规划详见 [`docs/improvement_plan_v0.2.md`](docs/improvement_plan_v0.2.md)。
+[![CI](https://github.com/SongMingLI-CS/aether-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/SongMingLI-CS/aether-platform/actions/workflows/ci.yml)
+
+> 当前进度：**V0.2 · 阶段 4（交付质量）已交付** —— 知识原子 CRUD + 主动连接发现 + Web 界面 + Docker Compose 一键起 / CI / Actuator 健康检查。规划详见 [`docs/improvement_plan_v0.2.md`](docs/improvement_plan_v0.2.md)。
 
 ## ✨ 功能路线（对齐需求蓝图）
 
@@ -17,6 +19,19 @@
 - Java 21 · Spring Boot 3.5 · Spring Data JPA · MySQL 8
 - Bean Validation · springdoc-openapi（Swagger UI）· Testcontainers
 - Maven Wrapper
+
+## 🐳 一键启动（Docker Compose）
+
+```bash
+# 根目录执行（可选覆盖口令与端口）
+DB_PASSWORD=your-password BACKEND_PORT=8080 FRONTEND_PORT=8081 docker compose up -d --build
+```
+
+- 前端：http://localhost:8081（`/api` 由 Nginx 反代到 backend）
+- 后端：http://localhost:8080（`/actuator/health` 健康检查、`/swagger-ui.html`）
+- MySQL 数据持久化在卷 `aether-mysql-data`；三个服务均带 healthcheck 与 `restart: unless-stopped`
+
+> 默认口令为 `aether-dev-password`（仅供本地开发，生产务必通过 `DB_PASSWORD` 覆盖）。
 
 ## 🚀 快速开始（本地）
 
@@ -94,7 +109,10 @@ backend/src/main/java/com/aether/aether_backend
 ├── domain/        # 领域实体（Builder 创建、软删除、乐观锁、UTC 审计时间）
 └── repository/    # Spring Data JPA
 docs/              # 需求蓝图 / 数据库设计 / 完善方案（V0.2）
-frontend/          # Vite + React + TypeScript 前端
+frontend/          # Vite + React + TypeScript 前端（含 Dockerfile + nginx.conf）
+backend/Dockerfile # 后端多阶段构建（maven build → temurin JRE）
+docker-compose.yml # MySQL + backend + frontend 一键编排
+.github/workflows  # GitHub Actions CI（后端测试 + 前端构建）
 ```
 
 ## 🖥 前端（Vite + React + TypeScript）

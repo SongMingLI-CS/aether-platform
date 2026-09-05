@@ -45,6 +45,11 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Production-ready health/metrics (used by docker-compose healthcheck) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
 		<!-- Bean Validation for request DTOs -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
