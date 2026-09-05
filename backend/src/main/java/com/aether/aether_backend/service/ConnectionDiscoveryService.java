@@ -5,6 +5,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
@@ -14,6 +15,8 @@ import com.aether.aether_backend.domain.ConnectionStatus;
 import com.aether.aether_backend.domain.KnowledgeAtom;
 import com.aether.aether_backend.domain.KnowledgeConnection;
 import com.aether.aether_backend.domain.event.AtomCreatedEvent;
+import com.aether.aether_backend.domain.event.ConnectionDiscoveredEvent;
+import com.aether.aether_backend.dto.ConnectionResponse;
 import com.aether.aether_backend.repository.KnowledgeAtomRepository;
 import com.aether.aether_backend.repository.KnowledgeConnectionRepository;
 import com.aether.aether_backend.service.embedding.EmbeddingClient;
@@ -39,6 +42,7 @@ public class ConnectionDiscoveryService {
     private final KnowledgeConnectionRepository connectionRepository;
     private final EmbeddingClient embeddingClient;
     private final VectorStore vectorStore;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${aether.discovery.min-similarity:0.6}")
     private double minSimilarity;
@@ -49,11 +53,13 @@ public class ConnectionDiscoveryService {
     public ConnectionDiscoveryService(KnowledgeAtomRepository atomRepository,
                                       KnowledgeConnectionRepository connectionRepository,
                                       EmbeddingClient embeddingClient,
-                                      VectorStore vectorStore) {
+                                      VectorStore vectorStore,
+                                      ApplicationEventPublisher eventPublisher) {
         this.atomRepository = atomRepository;
         this.connectionRepository = connectionRepository;
         this.embeddingClient = embeddingClient;
         this.vectorStore = vectorStore;
+        this.eventPublisher = eventPublisher;
     }
 
     @Async
@@ -90,8 +96,10 @@ public class ConnectionDiscoveryService {
                 continue;
             }
             String reason = buildReason(sourceId, targetId);
-            connectionRepository.save(new KnowledgeConnection(
+            KnowledgeConnection saved = connectionRepository.save(new KnowledgeConnection(
                     sourceId, targetId, hit.score(), ConnectionStatus.PENDING, reason));
+            eventPublisher.publishEvent(new ConnectionDiscoveredEvent(
+                    ConnectionResponse.from(saved, snippetOf(sourceId), snippetOf(targetId))));
             created++;
         }
         log.info(">>> Discovery: atom {} embedded+indexed; {} new connection(s), {} skipped/existing",
@@ -99,9 +107,11 @@ public class ConnectionDiscoveryService {
     }
 
     private String buildReason(long sourceId, long targetId) {
-        String source = snippet(atomRepository.findById(sourceId).map(KnowledgeAtom::getContentText).orElse(""));
-        String target = snippet(atomRepository.findById(targetId).map(KnowledgeAtom::getContentText).orElse(""));
-        return "「" + source + "」与「" + target + "」内容语义相近，疑似相关";
+        return "「" + snippetOf(sourceId) + "」与「" + snippetOf(targetId) + "」内容语义相近，疑似相关";
+    }
+
+    private String snippetOf(long atomId) {
+        return snippet(atomRepository.findById(atomId).map(KnowledgeAtom::getContentText).orElse(""));
     }
 
     private String snippet(String text) {

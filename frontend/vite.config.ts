@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Relative asset paths so the built bundle also works when loaded from
+  // file:// inside the Electron shell (in addition to nginx/web hosting).
+  base: './',
   plugins: [react()],
   server: {
     port: 5173,

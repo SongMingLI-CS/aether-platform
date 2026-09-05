@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/SongMingLI-CS/aether-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/SongMingLI-CS/aether-platform/actions/workflows/ci.yml)
 
-> 当前进度：**V0.2 · 阶段 4（交付质量）已交付** —— 知识原子 CRUD + 主动连接发现 + Web 界面 + Docker Compose 一键起 / CI / Actuator 健康检查。规划详见 [`docs/improvement_plan_v0.2.md`](docs/improvement_plan_v0.2.md)。
+> 当前进度：**V0.2 · 阶段 4（交付质量）已交付** —— 知识原子 CRUD + 主动连接发现 + Web 界面 + Docker Compose 一键起 / CI / Actuator 健康检查。并在其上补齐增强项：**连接状态流转 API**、**Ollama BGE + Qdrant 真实 provider**、**Electron 桌面弹窗**。规划详见 [`docs/improvement_plan_v0.2.md`](docs/improvement_plan_v0.2.md)。
 
 ## ✨ 功能路线（对齐需求蓝图）
 
@@ -12,7 +12,7 @@
 | :--- | :--- | :--- |
 | 1 | 知识原子（KnowledgeAtom）CRUD：创建用 Builder、JPA 持久化、纯文本/Markdown | ✅ 已交付（`/api/v1/atoms`，含分页/关键词搜索/软删除/乐观锁） |
 | 2 | "主动式"连接发现：本地向量化 + 检索，自动发现原子间高相关连接 | ✅ 已交付（原子创建即异步发现，`/api/v1/connections` 可查；Embedding/向量库均可插拔切换） |
-| 3 | 极简推送/界面：高相关连接触达用户（PC 端） | ✅ Web 界面已交付（React：原子管理 + 连接发现可视化，对应"新笔记→旧笔记→相似度"展示）；桌面弹窗（Electron）可选后续 |
+| 3 | 极简推送/界面：高相关连接触达用户（PC 端） | ✅ 已交付（Web：React 原子/连接可视化；**Electron 桌面弹窗**：SSE 实时订阅 + 系统原生通知） |
 
 ## 🧰 技术栈
 
@@ -85,10 +85,44 @@ curl -X DELETE http://localhost:8080/api/v1/atoms/1
 curl 'http://localhost:8080/api/v1/connections?status=PENDING'
 # 查看某个原子的连接
 curl 'http://localhost:8080/api/v1/atoms/1/connections'
+# 连接状态流转（PENDING → CONFIRMED / IGNORED）
+curl -X PATCH http://localhost:8080/api/v1/connections/1 \
+  -H 'Content-Type: application/json' -d '{"status":"CONFIRMED"}'
+# 实时订阅新发现的连接（SSE，Electron 弹窗即消费此流）
+curl -N 'http://localhost:8080/api/v1/connections/stream'
 ```
 
 > 开发模式（自动写入一条演示数据、输出 SQL）：
 > `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`
+
+### 🧠 本地 AI provider（Ollama BGE + Qdrant）
+
+默认使用**零依赖**的 `fingerprint` 向量 + 内存向量库，开箱即跑。要接入真实本地语义模型与向量库：
+
+```bash
+# 1) 拉起 Ollama 与 Qdrant（可选的 ai profile）
+docker compose --profile ai up -d
+# 2) 拉取一个本地 BGE 模型（首次）
+docker exec -it aether-ollama ollama pull bge-m3
+# 3) 以 provider 覆盖默认实现（见 backend/.env.example 的同名环境变量）
+export AETHER_EMBEDDING_PROVIDER=ollama
+export AETHER_VECTORSTORE_PROVIDER=qdrant
+```
+
+`EmbeddingClient`（`fingerprint` / `ollama`）与 `VectorStore`（`memory` / `qdrant`）均为可插拔接口，配置见 `backend/src/main/resources/application.properties`。
+
+### 🖥 Electron 桌面弹窗（Epic 3）
+
+后端以 SSE（`/api/v1/connections/stream`）实时推送新连接，Electron 主进程订阅后弹出系统原生通知（「新笔记 → 旧笔记 → 相似度」）：
+
+```bash
+cd frontend
+npm install
+npm run desktop:dev    # 开发：Vite + Electron 一起起（/api 自动代理到 8080）
+npm run desktop:dist   # 打包：先构建 dist/，再 electron-builder 产出安装包到 release/
+```
+
+可用 `AETHER_BACKEND_URL`（默认 `http://localhost:8080`）指向后端地址。
 
 ## 🧪 测试
 

@@ -54,6 +54,30 @@ public class KnowledgeConnectionService {
         return map(connectionRepository.findByAtomId(atomId, pageable));
     }
 
+    /**
+     * Transitions a connection out of the PENDING state. The only valid targets
+     * are CONFIRMED and IGNORED; PENDING is the AI-discovered initial state and
+     * cannot be requested by clients.
+     */
+    @Transactional
+    public ConnectionResponse updateStatus(long id, ConnectionStatus status) {
+        if (status == ConnectionStatus.PENDING) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "status 仅支持 CONFIRMED 或 IGNORED");
+        }
+        KnowledgeConnection connection = connectionRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "连接不存在: id=" + id));
+        connection.setStatus(status);
+        connectionRepository.save(connection);
+        return toResponse(connection);
+    }
+
+    private ConnectionResponse toResponse(KnowledgeConnection connection) {
+        Map<Long, String> snippets = fetchSnippets(List.of(connection));
+        return ConnectionResponse.from(connection,
+                snippets.getOrDefault(connection.getSourceAtomId(), ""),
+                snippets.getOrDefault(connection.getTargetAtomId(), ""));
+    }
+
     private PageResult<ConnectionResponse> map(Page<KnowledgeConnection> connections) {
         Map<Long, String> snippets = fetchSnippets(connections.getContent());
         return PageResult.from(connections, connection -> ConnectionResponse.from(

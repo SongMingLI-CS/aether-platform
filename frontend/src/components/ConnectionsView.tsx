@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { listConnections } from '../api'
+import { listConnections, updateConnectionStatus } from '../api'
 import type { ConnectionResponse, ConnectionStatus } from '../types'
 
 const PAGE_SIZE = 20
@@ -28,6 +28,12 @@ export default function ConnectionsView() {
   useEffect(() => {
     load()
   }, [load])
+
+  function handleStatus(id: number, next: ConnectionStatus) {
+    updateConnectionStatus(id, next)
+      .then(() => setReloadKey((k) => k + 1))
+      .catch((e: Error) => setError(e.message))
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -74,6 +80,16 @@ export default function ConnectionsView() {
                 <span>{c.reason}</span>
                 <span>{new Date(c.createdAt).toLocaleString()}</span>
               </div>
+              {c.status === 'PENDING' && (
+                <div className="toolbar" style={{ marginTop: 6 }}>
+                  <button className="btn primary" onClick={() => handleStatus(c.id, 'CONFIRMED')}>
+                    确认
+                  </button>
+                  <button className="btn" onClick={() => handleStatus(c.id, 'IGNORED')}>
+                    忽略
+                  </button>
+                </div>
+              )}
             </div>
           ))
         )}

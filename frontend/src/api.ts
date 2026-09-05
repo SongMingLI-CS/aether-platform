@@ -7,7 +7,8 @@ import type {
   Result,
 } from './types'
 
-const V1 = '/api/v1'
+const API_BASE = (typeof window !== 'undefined' && window.aether?.backendUrl) || ''
+const V1 = `${API_BASE}/api/v1`
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -61,4 +62,14 @@ export function listAtomConnections(
 ): Promise<PageResult<ConnectionResponse>> {
   const qs = new URLSearchParams({ page: String(params.page), size: String(params.size) })
   return request<PageResult<ConnectionResponse>>(`${V1}/atoms/${id}/connections?${qs.toString()}`)
+}
+
+export function updateConnectionStatus(
+  id: number,
+  status: ConnectionStatus,
+): Promise<ConnectionResponse> {
+  return request<ConnectionResponse>(`${V1}/connections/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
 }

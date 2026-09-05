@@ -45,5 +45,30 @@ services:
     ports:
       - "${FRONTEND_PORT:-8081}:80"
 
+  # --- Optional local AI services (Epic 2 real providers) ---------------------
+  # Start them together with: docker compose --profile ai up
+  # Then set AETHER_EMBEDDING_PROVIDER=ollama / AETHER_VECTORSTORE_PROVIDER=qdrant.
+  ollama:
+    image: ollama/ollama
+    profiles: [ai]
+    container_name: aether-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - aether-ollama-data:/root/.ollama
+
+  qdrant:
+    image: qdrant/qdrant
+    profiles: [ai]
+    container_name: aether-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - aether-qdrant-data:/qdrant/storage
+
 volumes:
   aether-mysql-data:
+  aether-ollama-data:
+  aether-qdrant-data:

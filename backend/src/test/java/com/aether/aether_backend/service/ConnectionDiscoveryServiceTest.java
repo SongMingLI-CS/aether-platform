@@ -17,12 +17,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.aether.aether_backend.domain.ConnectionStatus;
 import com.aether.aether_backend.domain.ContentType;
 import com.aether.aether_backend.domain.KnowledgeAtom;
 import com.aether.aether_backend.domain.KnowledgeConnection;
+import com.aether.aether_backend.domain.event.ConnectionDiscoveredEvent;
 import com.aether.aether_backend.repository.KnowledgeAtomRepository;
 import com.aether.aether_backend.repository.KnowledgeConnectionRepository;
 import com.aether.aether_backend.service.embedding.EmbeddingClient;
@@ -40,6 +42,8 @@ class ConnectionDiscoveryServiceTest {
     private EmbeddingClient embeddingClient;
     @Mock
     private VectorStore vectorStore;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private ConnectionDiscoveryService discoveryService;
@@ -63,11 +67,13 @@ class ConnectionDiscoveryServiceTest {
         when(atomRepository.findById(1L))
                 .thenReturn(Optional.of(new KnowledgeAtom.Builder("old note", ContentType.TEXT).build()));
         when(connectionRepository.findBySourceAtomIdAndTargetAtomId(1L, 2L)).thenReturn(Optional.empty());
+        when(connectionRepository.save(any(KnowledgeConnection.class))).thenAnswer(inv -> inv.getArgument(0));
 
         discoveryService.processAtom(2L);
 
         verify(vectorStore).upsert(2L, VECTOR);
         verify(connectionRepository).save(any(KnowledgeConnection.class));
+        verify(eventPublisher).publishEvent(any(ConnectionDiscoveredEvent.class));
     }
 
     @Test
@@ -79,6 +85,7 @@ class ConnectionDiscoveryServiceTest {
         when(vectorStore.search(VECTOR, 5)).thenReturn(List.of(new ScoredAtom(2L, 0.9)));
         when(atomRepository.findById(2L)).thenReturn(Optional.of(new KnowledgeAtom.Builder("x", ContentType.TEXT).build()));
         when(connectionRepository.findBySourceAtomIdAndTargetAtomId(1L, 2L)).thenReturn(Optional.empty());
+        when(connectionRepository.save(any(KnowledgeConnection.class))).thenAnswer(inv -> inv.getArgument(0));
 
         discoveryService.processAtom(1L);
 
