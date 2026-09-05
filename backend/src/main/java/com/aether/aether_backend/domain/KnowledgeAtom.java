@@ -1,8 +1,10 @@
 package com.aether.aether_backend.domain;
 
-// 【导入 "弹药"】
-import jakarta.persistence.*; // <-- 【JPA核心弹药】
-import java.time.LocalDateTime; // <-- 【CTO标准：现代时间API】
+// Imports
+import jakarta.persistence.*;
+import java.time.Instant;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 /**
  * Aether 核心领域实体 (Domain Entity): 知识原子
@@ -10,8 +12,13 @@ import java.time.LocalDateTime; // <-- 【CTO标准：现代时间API】
  * 2. 这是一个 "POJO" (Plain Old Java Object)
  * 3. 它使用 "Builder模式" 进行"安全"创建
  */
-@Entity // <-- 【注解1】: 告诉JPA："这是一个"实体类"，请"管理"它
-@Table(name = "t_knowledge_atom") // <-- 【注解2】: “精确”对应我们"昨天"设计的"表名"
+@Entity
+@Table(name = "t_knowledge_atom")
+// Logical delete: delete() issues an UPDATE ... SET is_deleted = 1 instead of a
+// physical DELETE, and every read is restricted to non-deleted rows.
+// The version predicate/update keeps optimistic locking consistent.
+@SQLDelete(sql = "UPDATE t_knowledge_atom SET is_deleted = 1, version = version + 1 WHERE id = ? AND version = ?")
+@SQLRestriction("is_deleted = 0")
 public class KnowledgeAtom {
 
     // --- 字段 (Fields) ---
@@ -27,16 +34,22 @@ public class KnowledgeAtom {
     @Column(nullable = false, length = 20)
     private String contentType;
 
+    // UTC instants: no ambiguity across timezones
     @Column(nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     // 我们在 "db_schema_v0.1.md" 中定义了 "DEFAULT 0"
     // 我们用 "Boolean" (对象) 而不是 "boolean" (基本类型) 来允许 "null" 值，以便JPA处理
     @Column(nullable = false)
     private Boolean isDeleted;
+
+    // Optimistic lock, auto-incremented by JPA on every update
+    @Version
+    @Column(nullable = false)
+    private Long version;
 
     // --- 【CTO标准：JPA"必须"的"无参构造"】 ---
     /**
@@ -51,17 +64,20 @@ public class KnowledgeAtom {
 
     @PrePersist // <-- 在"插入"(INSERT)数据库"之前"，"自动"执行此方法
     protected void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
         if (this.isDeleted == null) {
-            this.isDeleted = false; // 确保默认值
+            this.isDeleted = false; // 默认值
+        }
+        if (this.version == null) {
+            this.version = 0L; // 乐观锁初始值
         }
     }
 
     @PreUpdate // <-- 在"更新"(UPDATE)数据库"之前"，"自动"执行此方法
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = Instant.now();
     }
 
     // --- 【CTO质量线：Builder模式】 (【步骤五】的"核心交付物") ---
@@ -125,19 +141,19 @@ public class KnowledgeAtom {
         this.contentType = contentType;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
+    public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
 
@@ -147,5 +163,13 @@ public class KnowledgeAtom {
 
     public void setDeleted(Boolean deleted) {
         isDeleted = deleted;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }

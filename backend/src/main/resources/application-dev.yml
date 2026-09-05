@@ -1,0 +1,9 @@
+# Development profile. Activate with: --spring.profiles.active=dev
+# No secrets here: credentials always come from environment variables.
+spring:
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    com.aether.aether_backend: DEBUG
