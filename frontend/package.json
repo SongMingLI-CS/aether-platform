@@ -39,17 +39,20 @@
     },
     "mac": {
       "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
       "target": [
         "dmg",
         "zip"
       ]
     },
     "win": {
+      "icon": "build/icon.png",
       "target": [
         "nsis"
       ]
     },
     "linux": {
+      "icon": "build/icon.png",
       "target": [
         "AppImage"
       ]

@@ -124,6 +124,9 @@ npm run desktop:dist   # 打包：先构建 dist/，再 electron-builder 产出�
 
 可用 `AETHER_BACKEND_URL`（默认 `http://localhost:8080`）指向后端地址。
 
+> 应用图标由 `frontend/scripts/generate-icon.mjs` 零依赖生成（`build/icon.png`，可运行 `node scripts/generate-icon.mjs` 重新生成）。
+> 默认产出**未签名**安装包（本地开发），正式分发请参见 [`docs/macos-signing.md`](docs/macos-signing.md)。
+
 ## 🧪 测试
 
 集成测试使用 Testcontainers 自动拉起真实 MySQL，不依赖本地数据库口令：
@@ -170,4 +173,6 @@ npm run build      # 类型检查 + 生产构建 → dist/
 - [`docs/product_requirements_v0.1.md`](docs/product_requirements_v0.1.md) —— V0.1 需求蓝图
 - [`docs/db_schema_v0.1.md`](docs/db_schema_v0.1.md) —— V0.1 数据库设计
 - [`docs/improvement_plan_v0.2.md`](docs/improvement_plan_v0.2.md) —— 完善方案与任务拆解
+- [`docs/api_v0.2.md`](docs/api_v0.2.md) —— API 速查（统一响应 / 错误码 / SSE 推送格式）
+- [`docs/macos-signing.md`](docs/macos-signing.md) —— macOS 代码签名与公证
 
