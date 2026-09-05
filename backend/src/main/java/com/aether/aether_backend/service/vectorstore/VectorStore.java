@@ -14,6 +14,8 @@ public interface VectorStore {
 
     void remove(long atomId);
 
+    void clear();
+
     List<ScoredAtom> search(float[] queryVector, int topK);
 
     int size();

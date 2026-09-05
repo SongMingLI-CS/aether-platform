@@ -31,6 +31,11 @@ public class InMemoryVectorStore implements VectorStore {
     }
 
     @Override
+    public void clear() {
+        vectors.clear();
+    }
+
+    @Override
     public List<ScoredAtom> search(float[] queryVector, int topK) {
         List<ScoredAtom> hits = new ArrayList<>();
         double queryNorm = norm(queryVector);

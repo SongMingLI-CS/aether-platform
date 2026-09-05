@@ -32,6 +32,17 @@ class InMemoryVectorStoreTest {
         assertThat(store.size()).isEqualTo(1);
     }
 
+    @Test
+    void clear_removesAllVectors() {
+        store.upsert(1L, unitVector(0, 1.0f));
+        store.upsert(2L, unitVector(1, 1.0f));
+
+        store.clear();
+
+        assertThat(store.size()).isZero();
+        assertThat(store.search(unitVector(0, 1.0f), 5)).isEmpty();
+    }
+
     private float[] unitVector(int index, float value) {
         float[] vector = new float[4];
         vector[index] = value;

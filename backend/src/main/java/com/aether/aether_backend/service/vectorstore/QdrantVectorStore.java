@@ -66,6 +66,19 @@ public class QdrantVectorStore implements VectorStore {
     }
 
     @Override
+    public void clear() {
+        try {
+            restClient.delete()
+                    .uri("/collections/{collection}", collection)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (Exception e) {
+            log.warn("Qdrant clear collection failed: {}", e.getMessage());
+        }
+        ensuredDimensions = null;
+    }
+
+    @Override
     public List<ScoredAtom> search(float[] queryVector, int topK) {
         if (ensuredDimensions == null || topK <= 0) {
             return List.of();
