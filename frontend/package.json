@@ -12,11 +12,15 @@
     "preview": "vite preview",
     "desktop": "electron .",
     "desktop:dev": "concurrently -k -n vite,electron \"npm run dev\" \"wait-on http://localhost:5173 && VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
-    "desktop:dist": "npm run build && electron-builder"
+    "desktop:dist": "npm run build && electron-builder",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.14.10",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-force-graph-2d": "^1.29.1"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
@@ -34,7 +38,8 @@
     "productName": "Aether Platform",
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "build/icon.png"
     ],
     "directories": {
       "output": "release"
@@ -45,13 +50,32 @@
       "target": [
         "dmg",
         "zip"
+      ],
+      "arch": [
+        "universal"
       ]
     },
     "win": {
       "icon": "build/icon.png",
       "target": [
-        "nsis"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "build/icon.png",
+      "uninstallerIcon": "build/icon.png",
+      "installerHeaderIcon": "build/icon.png",
+      "include": "build/installer.nsh"
     },
     "linux": {
       "icon": "build/icon.png",
@@ -61,4 +85,3 @@
     }
   }
 }
-

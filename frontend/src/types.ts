@@ -2,6 +2,8 @@ export type ContentType = 'TEXT' | 'MARKDOWN' | 'IMAGE_URL'
 
 export type ConnectionStatus = 'PENDING' | 'CONFIRMED' | 'IGNORED'
 
+export type ConnectionOrigin = 'MANUAL' | 'AUTO'
+
 export interface Result<T> {
   code: number
   message: string
@@ -34,6 +36,12 @@ export interface ConnectionResponse {
   targetText: string
   similarity: number
   status: ConnectionStatus
+  origin?: ConnectionOrigin
   reason: string
   createdAt: string
+}
+
+export interface SearchHitResponse {
+  atom: AtomResponse
+  score: number
 }
