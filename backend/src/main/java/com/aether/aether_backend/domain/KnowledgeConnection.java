@@ -39,6 +39,10 @@ public class KnowledgeConnection {
     @Column(nullable = false, length = 20)
     private ConnectionStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private ConnectionOrigin origin;
+
     @Column(length = 500)
     private String reason;
 
@@ -54,11 +58,18 @@ public class KnowledgeConnection {
 
     public KnowledgeConnection(Long sourceAtomId, Long targetAtomId,
                                Double similarity, ConnectionStatus status, String reason) {
+        this(sourceAtomId, targetAtomId, similarity, status, reason, ConnectionOrigin.AUTO);
+    }
+
+    public KnowledgeConnection(Long sourceAtomId, Long targetAtomId,
+                               Double similarity, ConnectionStatus status, String reason,
+                               ConnectionOrigin origin) {
         this.sourceAtomId = sourceAtomId;
         this.targetAtomId = targetAtomId;
         this.similarity = similarity;
         this.status = status;
         this.reason = reason;
+        this.origin = origin;
     }
 
     @PrePersist
@@ -66,6 +77,9 @@ public class KnowledgeConnection {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
+        if (this.origin == null) {
+            this.origin = ConnectionOrigin.AUTO;
+        }
     }
 
     @PreUpdate
@@ -111,6 +125,14 @@ public class KnowledgeConnection {
 
     public void setStatus(ConnectionStatus status) {
         this.status = status;
+    }
+
+    public ConnectionOrigin getOrigin() {
+        return origin;
+    }
+
+    public void setOrigin(ConnectionOrigin origin) {
+        this.origin = origin;
     }
 
     public String getReason() {

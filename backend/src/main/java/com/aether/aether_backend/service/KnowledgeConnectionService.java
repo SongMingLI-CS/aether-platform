@@ -2,6 +2,7 @@ package com.aether.aether_backend.service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -14,6 +15,7 @@ import com.aether.aether_backend.common.api.PageResult;
 import com.aether.aether_backend.common.api.PageUtil;
 import com.aether.aether_backend.common.exception.BusinessException;
 import com.aether.aether_backend.common.exception.ErrorCode;
+import com.aether.aether_backend.domain.ConnectionOrigin;
 import com.aether.aether_backend.domain.ConnectionStatus;
 import com.aether.aether_backend.domain.KnowledgeAtom;
 import com.aether.aether_backend.domain.KnowledgeConnection;
@@ -68,6 +70,41 @@ public class KnowledgeConnectionService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "连接不存在: id=" + id));
         connection.setStatus(status);
         connectionRepository.save(connection);
+        return toResponse(connection);
+    }
+
+    /**
+     * Creates (or revives) a connection from an explicit user action (drag & drop).
+     * Manual connections carry the highest confidence: status = CONFIRMED and
+     * similarity = 1.0. The unordered pair is normalized and deduplicated in
+     * both directions; an existing PENDING/IGNORED row is overwritten to CONFIRMED
+     * instead of raising a conflict.
+     */
+    @Transactional
+    public ConnectionResponse createManual(long sourceAtomId, long targetAtomId) {
+        if (sourceAtomId == targetAtomId) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "不能连接同一个知识原子");
+        }
+        if (!atomRepository.existsById(sourceAtomId) || !atomRepository.existsById(targetAtomId)) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "知识原子不存在");
+        }
+        long a = Math.min(sourceAtomId, targetAtomId);
+        long b = Math.max(sourceAtomId, targetAtomId);
+
+        Optional<KnowledgeConnection> existing = connectionRepository.findByAtomPair(a, b);
+        KnowledgeConnection connection;
+        if (existing.isPresent()) {
+            // Revive/overwrite: PENDING or IGNORED becomes CONFIRMED.
+            connection = existing.get();
+            connection.setStatus(ConnectionStatus.CONFIRMED);
+            connection.setOrigin(ConnectionOrigin.MANUAL);
+            connection.setSimilarity(1.0);
+            connection.setReason("手动建立连接");
+            connectionRepository.save(connection);
+        } else {
+            connection = connectionRepository.save(new KnowledgeConnection(
+                    a, b, 1.0, ConnectionStatus.CONFIRMED, "手动建立连接", ConnectionOrigin.MANUAL));
+        }
         return toResponse(connection);
     }
 

@@ -1,8 +1,12 @@
 package com.aether.aether_backend.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,6 +17,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.aether.aether_backend.common.api.PageResult;
 import com.aether.aether_backend.common.api.Result;
 import com.aether.aether_backend.domain.ConnectionStatus;
+import com.aether.aether_backend.dto.ConnectionCreateRequest;
 import com.aether.aether_backend.dto.ConnectionResponse;
 import com.aether.aether_backend.dto.ConnectionStatusUpdateRequest;
 import com.aether.aether_backend.service.ConnectionStreamService;
@@ -48,6 +53,13 @@ public class ConnectionController {
             @RequestParam(required = false) ConnectionStatus status,
             @RequestParam(required = false) Double minSimilarity) {
         return Result.ok(service.list(page, size, status, minSimilarity));
+    }
+
+    @Operation(summary = "手动建立连接", description = "用户拖拽建立连接，直接置为 CONFIRMED；双向去重并支持 PENDING/IGNORED 复活")
+    @PostMapping("/connections")
+    public ResponseEntity<Result<ConnectionResponse>> createManual(@Valid @RequestBody ConnectionCreateRequest request) {
+        ConnectionResponse created = service.createManual(request.sourceAtomId(), request.targetAtomId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(Result.ok(created));
     }
 
     @Operation(summary = "查询某个知识原子的连接")

@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -17,6 +18,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.aether.aether_backend.common.api.PageResult;
+import com.aether.aether_backend.common.exception.BusinessException;
+import com.aether.aether_backend.common.exception.ErrorCode;
+import com.aether.aether_backend.domain.ConnectionOrigin;
 import com.aether.aether_backend.domain.ConnectionStatus;
 import com.aether.aether_backend.dto.ConnectionResponse;
 import com.aether.aether_backend.service.ConnectionStreamService;
@@ -38,7 +42,7 @@ class ConnectionControllerTest {
     void list_returnsPageInsideEnvelope() throws Exception {
         ConnectionResponse connection = new ConnectionResponse(
                 1L, 1L, "note a", 2L, "note b", 0.92,
-                ConnectionStatus.PENDING, "similar", java.time.Instant.parse("2026-01-01T00:00:00Z"));
+                ConnectionStatus.PENDING, ConnectionOrigin.AUTO, "similar", java.time.Instant.parse("2026-01-01T00:00:00Z"));
         when(service.list(eq(0), eq(20), eq(null), eq(null)))
                 .thenReturn(new PageResult<>(1, 1, 0, 20, List.of(connection)));
 
@@ -63,7 +67,7 @@ class ConnectionControllerTest {
     void updateStatus_patchesConnection() throws Exception {
         ConnectionResponse response = new ConnectionResponse(
                 1L, 1L, "note a", 2L, "note b", 0.92,
-                ConnectionStatus.CONFIRMED, "similar", java.time.Instant.parse("2026-01-01T00:00:00Z"));
+                ConnectionStatus.CONFIRMED, ConnectionOrigin.AUTO, "similar", java.time.Instant.parse("2026-01-01T00:00:00Z"));
         when(service.updateStatus(eq(1L), eq(ConnectionStatus.CONFIRMED))).thenReturn(response);
 
         mockMvc.perform(patch("/api/v1/connections/1")
@@ -81,5 +85,44 @@ class ConnectionControllerTest {
                         .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(40000));
+    }
+
+    @Test
+    void createManual_createsConfirmedConnection() throws Exception {
+        ConnectionResponse response = new ConnectionResponse(
+                1L, 1L, "note a", 2L, "note b", 1.0,
+                ConnectionStatus.CONFIRMED, ConnectionOrigin.MANUAL, "手动建立连接",
+                java.time.Instant.parse("2026-01-01T00:00:00Z"));
+        when(service.createManual(eq(1L), eq(2L))).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/connections")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sourceAtomId\":1,\"targetAtomId\":2}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.data.origin").value("MANUAL"))
+                .andExpect(jsonPath("$.data.similarity").value(1.0));
+    }
+
+    @Test
+    void createManual_missingIds_returns400() throws Exception {
+        mockMvc.perform(post("/api/v1/connections")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(40000));
+    }
+
+    @Test
+    void createManual_atomNotFound_returns404() throws Exception {
+        when(service.createManual(eq(99L), eq(100L)))
+                .thenThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "知识原子不存在"));
+
+        mockMvc.perform(post("/api/v1/connections")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sourceAtomId\":99,\"targetAtomId\":100}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(40400));
     }
 }

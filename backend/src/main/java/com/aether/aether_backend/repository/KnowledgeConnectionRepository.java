@@ -16,6 +16,17 @@ public interface KnowledgeConnectionRepository extends JpaRepository<KnowledgeCo
     Optional<KnowledgeConnection> findBySourceAtomIdAndTargetAtomId(long sourceAtomId, long targetAtomId);
 
     /**
+     * The (source, target) pair in either direction. The pair is stored in
+     * normalized (minId, maxId) order, but callers may pass either orientation.
+     */
+    @Query("""
+            select c from KnowledgeConnection c
+            where (c.sourceAtomId = :a and c.targetAtomId = :b)
+               or (c.sourceAtomId = :b and c.targetAtomId = :a)
+            """)
+    Optional<KnowledgeConnection> findByAtomPair(@Param("a") long a, @Param("b") long b);
+
+    /**
      * Connections involving one atom (as source or target), newest similarity first.
      */
     @Query("""
