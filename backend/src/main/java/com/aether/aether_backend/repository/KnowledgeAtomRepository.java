@@ -1,5 +1,7 @@
 package com.aether.aether_backend.repository;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,4 +28,19 @@ public interface KnowledgeAtomRepository extends JpaRepository<KnowledgeAtom, Lo
     Page<KnowledgeAtom> search(@Param("contentType") ContentType contentType,
                                @Param("keyword") String keyword,
                                Pageable pageable);
+
+    /**
+     * Full-text recall for hybrid search. Returns {@code [atomId, relevance]}
+     * rows ranked by {@code MATCH ... AGAINST} relevance (BM25-style lexical
+     * score). Native query, so soft-delete is filtered explicitly.
+     */
+    @Query(value = """
+            SELECT a.id, MATCH(a.content_text) AGAINST (:query IN NATURAL LANGUAGE MODE) AS relevance
+            FROM t_knowledge_atom a
+            WHERE a.is_deleted = 0
+              AND MATCH(a.content_text) AGAINST (:query IN NATURAL LANGUAGE MODE) > 0
+            ORDER BY relevance DESC
+            LIMIT :limit
+            """, nativeQuery = true)
+    List<Object[]> fullTextSearchIds(@Param("query") String query, @Param("limit") int limit);
 }

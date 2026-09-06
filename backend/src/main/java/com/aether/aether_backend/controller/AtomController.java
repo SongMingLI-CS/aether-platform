@@ -1,5 +1,7 @@
 package com.aether.aether_backend.controller;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,6 +21,8 @@ import com.aether.aether_backend.domain.KnowledgeAtom;
 import com.aether.aether_backend.dto.AtomCreateRequest;
 import com.aether.aether_backend.dto.AtomResponse;
 import com.aether.aether_backend.dto.AtomUpdateRequest;
+import com.aether.aether_backend.dto.SearchHitResponse;
+import com.aether.aether_backend.service.HybridSearchService;
 import com.aether.aether_backend.service.KnowledgeAtomService;
 
 import jakarta.validation.Valid;
@@ -35,9 +39,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class AtomController {
 
     private final KnowledgeAtomService service;
+    private final HybridSearchService hybridSearchService;
 
-    public AtomController(KnowledgeAtomService service) {
+    public AtomController(KnowledgeAtomService service, HybridSearchService hybridSearchService) {
         this.service = service;
+        this.hybridSearchService = hybridSearchService;
     }
 
     @Operation(summary = "创建知识原子")
@@ -56,6 +62,14 @@ public class AtomController {
             @RequestParam(required = false) ContentType contentType,
             @RequestParam(required = false) String keyword) {
         return Result.ok(service.list(page, size, contentType, keyword));
+    }
+
+    @Operation(summary = "混合检索知识原子", description = "全文(BM25 风格) + 向量语义双路召回，RRF 重排后返回")
+    @GetMapping("/search")
+    public Result<List<SearchHitResponse>> search(
+            @RequestParam("query") String query,
+            @RequestParam(defaultValue = "20") int limit) {
+        return Result.ok(hybridSearchService.search(query, limit));
     }
 
     @Operation(summary = "查询知识原子详情")

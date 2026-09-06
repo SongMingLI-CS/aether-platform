@@ -27,6 +27,8 @@ import com.aether.aether_backend.domain.KnowledgeAtom;
 import com.aether.aether_backend.dto.AtomCreateRequest;
 import com.aether.aether_backend.dto.AtomResponse;
 import com.aether.aether_backend.dto.AtomUpdateRequest;
+import com.aether.aether_backend.dto.SearchHitResponse;
+import com.aether.aether_backend.service.HybridSearchService;
 import com.aether.aether_backend.service.KnowledgeAtomService;
 
 /**
@@ -41,6 +43,9 @@ class AtomControllerTest {
 
     @MockBean
     private KnowledgeAtomService service;
+
+    @MockBean
+    private HybridSearchService hybridSearchService;
 
     @Test
     void create_returns201WithCreatedAtom() throws Exception {
@@ -120,6 +125,17 @@ class AtomControllerTest {
         mockMvc.perform(delete("/api/v1/atoms/5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test
+    void search_returnsFusedHits() throws Exception {
+        when(hybridSearchService.search("如何设计队列", 20))
+                .thenReturn(List.of(new SearchHitResponse(AtomResponse.from(atom(7L, "redis 队列")), 0.03)));
+
+        mockMvc.perform(get("/api/v1/atoms/search").param("query", "如何设计队列"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].atom.id").value(7));
     }
 
     private static KnowledgeAtom atom(long id, String contentText) {
